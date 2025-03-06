@@ -5,6 +5,7 @@ FROM eduartrobotik/eduart-robot:0.5.0
 USER root
 ENV TZ=Europe/Berlin
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+ENV ROS_DISTRO=jazzy
 
 # Avoids using interactions during building
 ENV DEBIAN_FRONTEND=noninteractive
@@ -56,7 +57,14 @@ RUN apt-get update \
     && curl -sL https://deb.nodesource.com/setup_18.x -o nodesource_setup.bash && \
     chmod +x nodesource_setup.bash && \
     bash -c ./nodesource_setup.bash && \
-    apt-get install -y nodejs ros-jazzy-turtlesim
+    apt-get install -y \
+        nodejs \
+        ros-$ROS_DISTRO-turtlesim \
+        ros-$ROS_DISTRO-control-msgs \
+        ros-$ROS_DISTRO-nav2-msgs \
+        ros-$ROS_DISTRO-aruco-opencv-msgs \
+        ros-$ROS_DISTRO-zbar-ros-interfaces
+
 
 # Install Node-RED and node-red-ros2-plugin
 RUN source /opt/ros/$ROS_DISTRO/setup.bash \
@@ -64,6 +72,7 @@ RUN source /opt/ros/$ROS_DISTRO/setup.bash \
     # && export NVM_DIR="$HOME/.nvm" \
     # && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" \
     && npm install -g --unsafe-perm \
+        npm i -g rimraf \
         node-red \
         rclnodejs \
         cron
