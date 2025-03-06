@@ -72,7 +72,8 @@ RUN source /opt/ros/$ROS_DISTRO/setup.bash \
     # && export NVM_DIR="$HOME/.nvm" \
     # && [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" \
     && npm install -g --unsafe-perm \
-        npm i -g rimraf \
+        rimraf \
+        uuid \
         node-red \
         rclnodejs \
         cron
