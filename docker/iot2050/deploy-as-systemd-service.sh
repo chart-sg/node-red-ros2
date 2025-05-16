@@ -17,6 +17,7 @@ echo "Installing systemd service on system"
 cp $systemd_service_file /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable $systemd_service_file
+systemctl start $systemd_service_file
 echo "Systemd service was installed and enabled, so it will start automatically at boot up."
 
 echo "With following commands you can control the Iot2050 systemd service:"
