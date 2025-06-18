@@ -62,7 +62,7 @@ cd edu_nodered_ros2_plugin/docker/<hardware>/
 Then execute the command:
 
 ```bash
-docker compose -p docker up
+sudo ./deploy-as-systemd-service.sh
 ```
 
 The Node-Red web server will start up. The docker container will be autostart after a reboot or if an error occurred.
