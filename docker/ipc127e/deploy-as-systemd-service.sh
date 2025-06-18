@@ -5,7 +5,7 @@ if [ "$(whoami)" != "root" ]; then
 fi
 
 docker_compose_file_path=$(pwd)
-systemd_service_file="iot2050-edu-nodered-ros2.service"
+systemd_service_file="ipc127e-edu-nodered-ros2.service"
 tag="<docker_compose_file_path>"
 
 echo "Deploying Docker Compose Services for Nodered"
