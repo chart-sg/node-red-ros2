@@ -75,26 +75,25 @@ module.exports = function(RED)
             var selected_domain = RED.nodes.getNode(config.domain).domain;
         }
 
-        // Creating Publisher
-        try {
-            console.log("creating publisher...");
-            console.log("type:")
-            console.log(config['selectedtype']);
+        // Check if topic is configured statically or dynamically
+        if (config['topic']) {
+            // Creating Publisher
+            try {
+                qos = get_qos_from_props(config['props']);
 
-            qos = get_qos_from_props(config['props']);
-            console.log("uses following QoS:")
-            console.log(qos);
-
-            this.publisher = Ros2Instance.instance().node.createPublisher(config['selectedtype'], config['topic'], {qos});
-            node.ready = true;
-            node.status({ fill: "yellow", shape: "dot", text: "created"});
-            console.log("publisher was created successfully");            
-        }
-        catch (error) {
-            console.log("creating publisher failed");
-            console.log(error);
+                // Initialize publisher asynchronously for static topic
+                this.initializePublisher(config, qos, node);
+            }
+            catch (error) {
+                console.log("creating publisher failed");
+                console.log(error);
+                node.ready = false;
+                node.status({ fill: "red", shape: "dot", text: "error"});
+            }
+        } else {
+            console.log("Dynamic publisher - awaiting input with topic");
             node.ready = false;
-            node.status({ fill: "red", shape: "dot", text: "error"});
+            node.status({ fill: "yellow", shape: "dot", text: "awaiting topic" });
         }
 
         // Event emitted when the deploy is finished
@@ -104,26 +103,85 @@ module.exports = function(RED)
 
         // Registers a listener to the input event,
         // which will be called whenever a message arrives at this node
-        node.on('input', function(msg) {
-            if (node.ready) {
+        node.on('input', async function(msg) {
+            // For dynamic publishers, handle topic creation/changes
+            if (!config['topic']) {
+                const topic = msg.topic;
+
+                if (!topic) {
+                    node.status({ fill: "red", shape: "dot", text: "missing topic in msg.topic" });
+                    return;
+                }
+
+                try {
+                    // Destroy existing publisher if topic changed
+                    if (node.publisher && node.currentTopic !== topic) {
+                        const ros2Node = await Ros2Instance.instance().getNode();
+                        ros2Node.destroyPublisher(node.publisher);
+                        node.publisher = null;
+                        console.log("Previous publisher destroyed for topic change");
+                    }
+
+                    // Create new publisher if needed
+                    if (!node.publisher) {
+                        const qos = get_qos_from_props(config['props']);
+                        const dynamicConfig = { ...config, topic: topic };
+                        
+                        await node.initializePublisher(dynamicConfig, qos, node);
+                        node.currentTopic = topic;
+                        node.status({ fill: "green", shape: "dot", text: `ready on: ${topic}` });
+                    }
+                } catch (error) {
+                    console.log("Error creating dynamic publisher:", error);
+                    node.status({ fill: "red", shape: "dot", text: "publisher error" });
+                    node.ready = false;
+                    return;
+                }
+            }
+
+            // Publish the message (for both static and dynamic publishers)
+            if (node.ready && node.publisher) {
                 node.status({ fill: "green", shape: "dot", text: "message published"});
 
                 // Passes the message to the next node in the flow
                 node.send(msg);
-                this.publisher.publish(msg.payload);
+                node.publisher.publish(msg.payload);
             }
             else {
-               done("node was not ready to process flow data");
+               console.log("node was not ready to process flow data");
             }
         });
 
         // Called when there is a re-deploy or the program is closed
-        node.on('close', function() {
-            Ros2Instance.instance().node.destroyPublisher(this.publisher);
-            this.publish = null;
+        node.on('close', async function() {
+            try {
+                const ros2Node = await Ros2Instance.instance().getNode();
+                ros2Node.destroyPublisher(node.publisher);
+            } catch (error) {
+                console.log("Error destroying publisher:", error.message);
+            }
+            node.publisher = null;
+            node.currentTopic = null;
             node.status({ fill: null, shape: null, text: ""});
         });
     }
+
+    // Async method to initialize the publisher
+    PublisherNode.prototype.initializePublisher = async function(config, qos, node) {
+        try {
+            // Wait for ROS2 node to be ready
+            const ros2Node = await Ros2Instance.instance().getNode();
+            
+            node.publisher = ros2Node.createPublisher(config['selectedtype'], config['topic'], {qos});
+            node.ready = true;
+            node.status({ fill: "yellow", shape: "dot", text: "created"});
+        } catch (error) {
+            console.log("creating publisher failed");
+            console.log(error);
+            node.ready = false;
+            node.status({ fill: "red", shape: "dot", text: "error"});
+        }
+    };
 
     // The node is registered in the runtime using the name Publisher
     RED.nodes.registerType("Publisher", PublisherNode);

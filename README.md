@@ -1,113 +1,82 @@
-# Node-RED ROS 2 Plugin
+# @chart/node-red-ros2
 
-[![License: MIT](https://img.shields.io/github/license/ramp-eu/TTE.project1.svg)](https://opensource.org/licenses/MIT)
+A fork of edu-nodered-ros2-plugin with enhanced shared ROS2 context management through the Chart bridge system.
 
-This project is started as an fork of [node-red-ros2-plugin](https://github.com/eProsima/node-red-ros2-plugin) from eProsima. We removed the [Integration Service](https://integration-service.docs.eprosima.com/en/latest/) and added ROS service client and ROS action client using the Java Script ROS API, [rclnodejs](https://github.com/RobotWebTools/rclnodejs).
+## ✨ Key Features
 
-|<img src='docs/warning.png' height='100' width='400'/>   |    Version 0.3.x of edu_nodered_ros2_plugin switches its ROS2 middleware from FastRTPS (the ROS2 default) to Cyclone DDS! This change is important because these two middlewares are not fully compatible. Therefore, if you update to version 0.3.x you have to make your sure that your whole ROS2 infrastructure uses the same middleware!    <br> <br>    If you wish to keep FastRTPS as your middleware, you can do this by simply editing a parameter file. Please refer to [this guide](https://github.com/EduArt-Robotik/edu_robot/blob/main/documentation/update/changing-middleware.md) (repository: edu_robot) on how to adjust the middleware settings for the docker containers and your system! |
-|---|----|
+- **🌉 Bridge Integration**: Uses `@chart/node-red-ros2-bridge` for seamless multi-plugin compatibility
+- **🔄 Async Initialization**: Robust async patterns with proper error handling  
+- **🔧 Hot Redeployment**: Proper cleanup and re-initialization support
+- **🤝 Multi-Plugin Compatible**: Works alongside `@chart/node-red-rmf` and other Chart ROS2 plugins
+- **⚡ Standalone Fallback**: Works independently when bridge is not available
 
-## Installation
+## 🚀 Installation
 
-### Checking if Node-Red is already Installed
-
-It may happen that the **compose-up** command fails because port 1880 is already in use. The application that caused this error can be determined with the following command:
-
+### With Bridge (Recommended for Multi-Plugin Setups)
 ```bash
-sudo netstat -tulpn
-```
-This command will print out a table with all used ports at moment. The 3. column shows on which ip and port an application is listening:
-
-```bash
-tcp   0   0 0.0.0.0:1880    0.0.0.0:*    LISTEN   27803/node-red 
+npm install @chart/node-red-ros2-bridge @chart/node-red-ros2
 ```
 
-In this case, the port is already in use by another Node Red installation. If this instance is installed on a Debian-based system, it can be uninstalled by :
-
+### Standalone
 ```bash
-sudo apt remove node-red 
+npm install @chart/node-red-ros2
 ```
 
-### Checking on a EduArt's Robot
+## 🏗️ Architecture
 
-If Node-Red should be installed on a EduArt's Robot than you have to connect to the robot first using command ssh. For this the robot's IP address is required. For installing or updating the Node-Red software a internet connection is required, this means usually the robot is connected by an ethernet connection to your local network. What leads in a IP address assigned by the DHCP server of your network. Either get the IP address from the router (usually by using its web interface) or use the tool nmap:
+This package uses the **Chart ROS2 Bridge** pattern:
 
-```bash
-sudo nmap -sn <your local subnet, for example: 192.168.1.0/24>
+```
+┌─────────────────────────────────────────────────────────────┐
+│                @chart/node-red-ros2-bridge                 │
+│         (Shared ROS2 Context Manager)                      │
+└─────────────────────┬───────────────────────────────────────┘
+                      │
+          ┌───────────┴──────────┐
+          │                      │
+┌─────────▼──────────┐  ┌────────▼─────────┐
+│ @chart/node-red-   │  │ @chart/node-red- │
+│ ros2               │  │ rmf              │
+└────────────────────┘  └──────────────────┘
 ```
 
-A list of all devices connected to your local subnet is shown. Pick the robot's IP. We assume the robot's IP is 192.168.0.100 from this point on. Connect to the robot using:
+### Benefits:
+- ✅ **No ROS2 context conflicts** between plugins
+- ✅ **Shared spinning** - efficient resource usage  
+- ✅ **Independent installation** - each plugin works alone or together
+- ✅ **Process-level management** - works across different Node-RED project structures
 
-```bash
-ssh root@192.168.0.100
+## 🔧 Usage
+
+The plugin automatically detects and uses the bridge package when available:
+
+```javascript
+// Nodes automatically use bridge when available
+const { Ros2Instance } = require('@chart/node-red-ros2/src/ros2/ros2-instance');
+
+const instance = Ros2Instance.instance();
+const node = await instance.getNode(); // Bridge-managed or standalone node
 ```
 
-Now use the instruction from section before.
+## 🎯 Compatibility
 
+- **With Bridge**: Full multi-plugin compatibility, shared ROS2 context
+- **Without Bridge**: Standalone mode with compatibility warnings
+- **Node-RED**: Hot deployment, proper cleanup, lifecycle management
 
-### Installing EduArt's Node-Red ROS2 Plugin
+## 📦 Available Nodes
 
-The plugin comes with a Node-Red installation deployed in a Docker image. This makes it easy to install and use. First get the open source code by cloning the repository on your target machine, most likely on a robot:
+- **Publisher** - Publish ROS2 messages
+- **Subscriber** - Subscribe to ROS2 topics  
+- **Service Client** - Call ROS2 services
+- **Action Client** - Execute ROS2 actions
+- **ROS2 Types** - Message type definitions
+- **DDS Settings** - Configure DDS parameters
 
-```bash
-git clone https://github.com/EduArt-Robotik/edu_nodered_ros2_plugin.git 
-```
+## 🔗 Related Packages
 
-Go inside the docker folder where the compose file is located. Replace the `<hardware>` with your specific hardware (e.g. iot2050):
-
-```bash
-cd edu_nodered_ros2_plugin/docker/<hardware>/
-```
-
-Then execute the command:
-
-```bash
-sudo ./deploy-as-systemd-service.sh
-```
-
-The Node-Red web server will start up. The docker container will be autostart after a reboot or if an error occurred.
-
-
-### Updating EduArt's Node-Red ROS2 Plugin
-
-#### Checking
-
-To be always up to date, it is worth checking the system regularly for updates. To do this, change to the "home" directory and then into the folder "edu_nodered_ros2_plugin" and execute the commands:
-
-```bash
-git checkout master
-git pull origin
-```
-
-The output will tell you if there is a new version of the code.
-
-#### Update
-
-Don't worry previously performed work in Node-Red will be preserved as the data is stored outside the Docker container. First remove current version. Go into the folder where the docker compose file is located (if you are using another plattform than the IOT2050 you might have to change to "rapberry"): 
-
-```bash
-cd edu_nodered_ros2_plugin/docker/iot2050/ 
-```
-
-Now the new version can be started by the command: 
-
-```bash
-docker compose -p docker up
-```
-
-The container will be stopped and the new pulled and started.
-
-
-## Usage
-
-> **_Note_** : we assume that the Node-Red server is running on the IP address 192.168.0.100. If this differs to your network configuration please replace the IP address accordingly.
-
-Open a browser you like enter the following address to visit the Node-Red web interface: http://192.168.0.100:1880. 
-This will open the typical NodeRed window.
-
-![Empty Node-Red Browser Instance](docs/empty-node-red.png)
-
-> **_Remember_** : your computer needs to be in the same Network as the robot. This could now also be the internal Router as the robot needs no internet anymore. 
+- [`@chart/node-red-ros2-bridge`](https://github.com/chart-sg/ros2-node-red-bridge) - Shared ROS2 context manager
+- [`@chart/node-red-rmf`](https://github.com/chart-sg/node-red-rmf) - RMF integration for Node-RED
 
 ### Node-RED palette
 
@@ -302,12 +271,10 @@ In order to perform a ROS action we need first to specify the associated type. T
     </tr>
 </table>
 
-#### Example
+## �� Original Project
 
-This example shows how to perform a action and displays the feedback and result using two **debug** nodes. It is based on the ROS action tutorial [turtle sim](https://docs.ros.org/en/foxy/Tutorials/Beginner-CLI-Tools/Understanding-ROS2-Actions/Understanding-ROS2-Actions.html#ros2-action-send-goal). If you want to reproduce it the turtle sim node has to be launched like in the tutorial.
+This fork is based on [edu-nodered-ros2-plugin](https://github.com/EduArt-Robotik/edu_nodered_ros2_plugin) by EduArt Robotik.
 
-![Action Client Example](docs/ros-action-turtle-sim.gif)
+## 📄 License
 
-### ROS2 Examples
-
-[Don't hit the Wall](docs/example-dont-hit-the-wall/example-dont-hit-the-wall.md)
+MIT License - see [LICENSE](LICENSE) file for details.

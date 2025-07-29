@@ -73,33 +73,24 @@ module.exports = function(RED)
             node.domain = RED.nodes.getNode(config.domain).domain;
         }
 
-        try {
-            console.log("creating subscription...");
-            console.log("type:");
-            console.log(config['selectedtype']);
+        // Check if topic is configured statically or dynamically
+        if (config['topic']) {
+            try {
+                qos = get_qos_from_props(config['props']);
 
-            qos = get_qos_from_props(config['props']);
-            console.log("uses following QoS:");
-            console.log(qos);
-
-            this.subscription = Ros2Instance.instance().node.createSubscription(
-                config['selectedtype'], config['topic'], { qos }, function(msg) {
-                    // Callback Function for Receiving a ROS Message
-                    node.status({ fill: "green", shape: "dot", text: "message received" });
-                    // Passes the message to the next node in the flow
-                    console.log("received message:");
-                    console.log(msg);
-                    node.send({ payload: msg });
-            });
-            node.ready = true;
-            node.status({ fill: "yellow", shape: "dot", text: "created"});
-            console.log("subscription was created successfully");
-        }
-        catch (error) {
-            console.log("creating subscription failed");
-            console.log(error);
+                // Initialize subscription asynchronously for static topic
+                this.initializeSubscription(config, qos, node);
+            }
+            catch (error) {
+                console.log("creating subscription failed");
+                console.log(error);
+                node.ready = false;
+                node.status({ fill: "red", shape: "dot", text: "error"});
+            }
+        } else {
+            console.log("Dynamic subscription - awaiting input with topic");
             node.ready = false;
-            node.status({ fill: "red", shape: "dot", text: "error"});
+            node.status({ fill: "yellow", shape: "dot", text: "awaiting topic" });
         }
 
         // Event emitted when the deploy is finished
@@ -109,13 +100,84 @@ module.exports = function(RED)
             }
         });
 
+        // Input handler for dynamic topic subscription
+        node.on('input', async function(msg) {
+            // For static subscriptions, this input handler is not used
+            if (config['topic']) {
+                return; // Static subscription already created
+            }
+
+            // Determine the topic: use msg.topic if provided
+            const topic = msg.topic;
+
+            if (!topic) {
+                node.status({ fill: "red", shape: "dot", text: "missing topic in msg.topic" });
+                return;
+            }
+
+            try {
+                // Destroy existing subscription if topic changed
+                if (node.subscription && node.currentTopic !== topic) {
+                    const ros2Node = await Ros2Instance.instance().getNode();
+                    ros2Node.destroySubscription(node.subscription);
+                    node.subscription = null;
+                    console.log("Previous subscription destroyed for topic change");
+                }
+
+                // Create new subscription if needed
+                if (!node.subscription) {
+                    const qos = get_qos_from_props(config['props']);
+                    const dynamicConfig = { ...config, topic: topic };
+                    
+                    await node.initializeSubscription(dynamicConfig, qos, node);
+                    node.currentTopic = topic;
+                    node.status({ fill: "green", shape: "dot", text: `subscribed to: ${topic}` });
+                }
+            } catch (error) {
+                console.log("Error creating dynamic subscription:", error);
+                node.status({ fill: "red", shape: "dot", text: "subscription error" });
+                node.ready = false;
+            }
+        });
+
         // Called when there is a re-deploy or the program is closed
-        node.on('close', function() {
-            Ros2Instance.instance().node.destroySubscription(this.subscription);
-            this.subscription = null;
+        node.on('close', async function() {
+            if (node.subscription) {
+                try {
+                    const ros2Node = await Ros2Instance.instance().getNode();
+                    ros2Node.destroySubscription(node.subscription);
+                } catch (error) {
+                    console.log("Error destroying subscription:", error.message);
+                }
+                node.subscription = null;
+            }
+            node.currentTopic = null;
             node.status({ fill: null, shape: null, text: ""});
         });
     }
+
+    // Async method to initialize the subscription
+    SubscriberNode.prototype.initializeSubscription = async function(config, qos, node) {
+        try {
+            // Wait for ROS2 node to be ready
+            const ros2Node = await Ros2Instance.instance().getNode();
+            
+            node.subscription = ros2Node.createSubscription(
+                config['selectedtype'], config['topic'], { qos }, function(msg) {
+                    // Callback Function for Receiving a ROS Message
+                    node.status({ fill: "green", shape: "dot", text: "message received" });
+                    // Passes the message to the next node in the flow
+                    node.send({ payload: msg });
+            });
+            node.ready = true;
+            node.status({ fill: "yellow", shape: "dot", text: "created"});
+        } catch (error) {
+            console.log("creating subscription failed");
+            console.log(error);
+            node.ready = false;
+            node.status({ fill: "red", shape: "dot", text: "error"});
+        }
+    };
 
     // The node is registered in the runtime using the name Subscriber
     RED.nodes.registerType("Subscriber", SubscriberNode);

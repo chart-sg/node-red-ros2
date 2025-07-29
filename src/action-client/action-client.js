@@ -26,22 +26,22 @@ module.exports = function(RED)
             node.domain = RED.nodes.getNode(config.domain).domain;
         }
 
-        try {
-            console.log("creating action client...");
-            console.log("type:")
-            console.log(config['selectedtype']);
-
-            this.action_client = new ActionClient(Ros2Instance.instance().node, config['selectedtype'], config['topic']);
-
-            node.ready = true;
-            node.status({ fill: "yellow", shape: "dot", text: "created"});
-            console.log("action client was created successfully");
-        }
-        catch (error) {
-            console.log("creating subscription failed");
-            console.log(error);
+        // Check if topic is configured statically or dynamically
+        if (config['topic']) {
+            try {
+                // Initialize action client asynchronously for static topic
+                this.initializeActionClient(config, node);
+            }
+            catch (error) {
+                console.log("creating action client failed");
+                console.log(error);
+                node.ready = false;
+                node.status({ fill: "red", shape: "dot", text: "error"});
+            }
+        } else {
+            console.log("Dynamic action client - awaiting input with topic");
             node.ready = false;
-            node.status({ fill: "red", shape: "dot", text: "error"});
+            node.status({ fill: "yellow", shape: "dot", text: "awaiting topic" });
         }
 
         // Event emitted when the deploy is finished
@@ -53,29 +53,81 @@ module.exports = function(RED)
 
         // Registers a listener to the input event,
         // which will be called whenever a message arrives at this node
-        node.on('input', function(msg) {
-            if (node.ready) {
-                if (this.action_client.isActionServerAvailable() == false) {
+        node.on('input', async function(msg) {
+            // For dynamic action clients, handle topic creation/changes
+            if (!config['topic']) {
+                const topic = msg.topic;
+
+                if (!topic) {
+                    node.status({ fill: "red", shape: "dot", text: "missing topic in msg.topic" });
+                    return;
+                }
+
+                try {
+                    // Destroy existing client if topic changed
+                    if (node.action_client && node.currentTopic !== topic) {
+                        node.action_client.destroy();
+                        node.action_client = null;
+                        console.log("Previous action client destroyed for topic change");
+                    }
+
+                    // Create new client if needed
+                    if (!node.action_client) {
+                        const dynamicConfig = { ...config, topic: topic };
+                        
+                        await node.initializeActionClient(dynamicConfig, node);
+                        node.currentTopic = topic;
+                        node.status({ fill: "green", shape: "dot", text: `ready on: ${topic}` });
+                    }
+                } catch (error) {
+                    console.log("Error creating dynamic action client:", error);
+                    node.status({ fill: "red", shape: "dot", text: "action client error" });
+                    node.ready = false;
+                    return;
+                }
+            }
+
+            // Perform action (for both static and dynamic clients)
+            if (node.ready && node.action_client) {
+                if (node.action_client.isActionServerAvailable() == false) {
                     node.status({ fill: "yellow", shape: "dot", text: "action not available"});
                     return;
                 }
 
-                console.log("starting of performing action");
                 node.future_action_result = performing_action(node, msg.payload);
-                console.log("started async function");
             }
             else {
-               done("node was not ready to process flow data");
+               console.log("node was not ready to process flow data");
             }
         });
 
         // Called when there is a re-deploy or the program is closed
         node.on('close', function() {
-            this.action_client.destroy();
-            this.action_client = null;
+            if (node.action_client) {
+                node.action_client.destroy();
+                node.action_client = null;
+            }
+            node.currentTopic = null;
             node.status({ fill: null, shape: null, text: ""});
         });
     }
+
+    // Async method to initialize the action client
+    ActionClientNode.prototype.initializeActionClient = async function(config, node) {
+        try {
+            // Wait for ROS2 node to be ready
+            const ros2Node = await Ros2Instance.instance().getNode();
+            
+            node.action_client = new ActionClient(ros2Node, config['selectedtype'], config['topic']);
+            node.ready = true;
+            node.status({ fill: "yellow", shape: "dot", text: "created"});
+        } catch (error) {
+            console.log("creating action client failed");
+            console.log(error);
+            node.ready = false;
+            node.status({ fill: "red", shape: "dot", text: "error"});
+        }
+    };
 
     // performing action
     async function performing_action(node, goal_request)

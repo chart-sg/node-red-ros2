@@ -25,21 +25,22 @@ module.exports = function(RED)
             node.domain = RED.nodes.getNode(config.domain).domain;
         }
 
-        try {
-            console.log("creating service client...");
-            console.log("type:")
-            console.log(config['selectedtype']);
-
-            this.client = Ros2Instance.instance().node.createClient(config['selectedtype'], config['topic'])
-            node.ready = true;
-            node.status({ fill: "yellow", shape: "dot", text: "created"});
-            console.log("service client was created successfully");
-        }
-        catch (error) {
-            console.log("creating subscription failed");
-            console.log(error);
+        // Check if topic is configured statically or dynamically
+        if (config['topic']) {
+            try {
+                // Initialize service client asynchronously for static topic
+                this.initializeServiceClient(config, node);
+            }
+            catch (error) {
+                console.log("creating service client failed");
+                console.log(error);
+                node.ready = false;
+                node.status({ fill: "red", shape: "dot", text: "error"});
+            }
+        } else {
+            console.log("Dynamic service client - awaiting input with topic");
             node.ready = false;
-            node.status({ fill: "red", shape: "dot", text: "error"});
+            node.status({ fill: "yellow", shape: "dot", text: "awaiting topic" });
         }
 
         // Event emitted when the deploy is finished
@@ -51,9 +52,44 @@ module.exports = function(RED)
 
         // Registers a listener to the input event,
         // which will be called whenever a message arrives at this node
-        node.on('input', function(msg) {
-            if (node.ready) {
-                if (this.client.isServiceServerAvailable() == false) {
+        node.on('input', async function(msg) {
+            // For dynamic service clients, handle topic creation/changes
+            if (!config['topic']) {
+                const topic = msg.topic;
+
+                if (!topic) {
+                    node.status({ fill: "red", shape: "dot", text: "missing topic in msg.topic" });
+                    return;
+                }
+
+                try {
+                    // Destroy existing client if topic changed
+                    if (node.client && node.currentTopic !== topic) {
+                        const ros2Node = await Ros2Instance.instance().getNode();
+                        ros2Node.destroyClient(node.client);
+                        node.client = null;
+                        console.log("Previous service client destroyed for topic change");
+                    }
+
+                    // Create new client if needed
+                    if (!node.client) {
+                        const dynamicConfig = { ...config, topic: topic };
+                        
+                        await node.initializeServiceClient(dynamicConfig, node);
+                        node.currentTopic = topic;
+                        node.status({ fill: "green", shape: "dot", text: `ready on: ${topic}` });
+                    }
+                } catch (error) {
+                    console.log("Error creating dynamic service client:", error);
+                    node.status({ fill: "red", shape: "dot", text: "service client error" });
+                    node.ready = false;
+                    return;
+                }
+            }
+
+            // Make service call (for both static and dynamic clients)
+            if (node.ready && node.client) {
+                if (node.client.isServiceServerAvailable() == false) {
                     node.status({ fill: "yellow", shape: "dot", text: "service not available"});
                     return;
                 }
@@ -61,24 +97,47 @@ module.exports = function(RED)
                 // service is available and ready
                 node.status({ fill: "green", shape: "dot", text: "request published"});
 
-                this.client.sendRequest(msg.payload, function(response) {
+                node.client.sendRequest(msg.payload, function(response) {
                     // Passes the message to the next node in the flow
                     node.status({ fill: "green", shape: "dot", text: "response received"});
                     node.send({ payload: response });
                 });
             }
             else {
-               done("node was not ready to process flow data");
+               console.log("node was not ready to process flow data");
             }
         });
 
         // Called when there is a re-deploy or the program is closed
-        node.on('close', function() {
-            Ros2Instance.instance().node.destroyClient(this.client);
-            this.client = null;
+        node.on('close', async function() {
+            try {
+                const ros2Node = await Ros2Instance.instance().getNode();
+                ros2Node.destroyClient(node.client);
+            } catch (error) {
+                console.log("Error destroying service client:", error.message);
+            }
+            node.client = null;
+            node.currentTopic = null;
             node.status({ fill: null, shape: null, text: ""});
         });
     }
+
+    // Async method to initialize the service client
+    ServiceClientNode.prototype.initializeServiceClient = async function(config, node) {
+        try {
+            // Wait for ROS2 node to be ready
+            const ros2Node = await Ros2Instance.instance().getNode();
+            
+            node.client = ros2Node.createClient(config['selectedtype'], config['topic']);
+            node.ready = true;
+            node.status({ fill: "yellow", shape: "dot", text: "created"});
+        } catch (error) {
+            console.log("creating service client failed");
+            console.log(error);
+            node.ready = false;
+            node.status({ fill: "red", shape: "dot", text: "error"});
+        }
+    };
 
     // The node is registered in the runtime using the name "Service Client"
     RED.nodes.registerType("Service Client", ServiceClientNode);
