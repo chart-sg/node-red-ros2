@@ -1,35 +1,35 @@
 # @chart/node-red-ros2
 
-A fork of edu-nodered-ros2-plugin with enhanced shared ROS2 context management through the Chart bridge system.
+A Node-RED package providing ROS2 integration with seamless multi-plugin compatibility through the Chart SharedManager architecture.
 
 ## ✨ Key Features
 
-- **🌉 Bridge Integration**: Uses `@chart/node-red-ros2-bridge` for seamless multi-plugin compatibility
+- **🌉 Manager Integration**: Built-in `@chart/node-red-ros2-manager` for seamless multi-plugin compatibility
 - **🔄 Async Initialization**: Robust async patterns with proper error handling  
 - **🔧 Hot Redeployment**: Proper cleanup and re-initialization support
 - **🤝 Multi-Plugin Compatible**: Works alongside `@chart/node-red-rmf` and other Chart ROS2 plugins
-- **⚡ Standalone Fallback**: Works independently when bridge is not available
+- **⚡ ActionClient Reliability**: No spinning conflicts or nullptr errors
 
 ## 🚀 Installation
 
-### With Bridge (Recommended for Multi-Plugin Setups)
 ```bash
-npm install @chart/node-red-ros2-bridge @chart/node-red-ros2
+# Install the ROS2 plugin (manager included automatically)
+npm install @chart/node-red-ros2
+
+# Or install both ROS2 + RMF for complete integration
+npm install @chart/node-red-ros2 @chart/node-red-rmf
 ```
 
-### Standalone
-```bash
-npm install @chart/node-red-ros2
-```
+*The `@chart/node-red-ros2-manager` is automatically installed as a dependency.*
 
 ## 🏗️ Architecture
 
-This package uses the **Chart ROS2 Bridge** pattern:
+This package uses the **Chart SharedManager** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                @chart/node-red-ros2-bridge                 │
-│         (Shared ROS2 Context Manager)                      │
+│                @chart/node-red-ros2-manager                 │
+│              (Shared ROS2 Context Manager)                 │
 └─────────────────────┬───────────────────────────────────────┘
                       │
           ┌───────────┴──────────┐
@@ -42,27 +42,26 @@ This package uses the **Chart ROS2 Bridge** pattern:
 
 ### Benefits:
 - ✅ **No ROS2 context conflicts** between plugins
-- ✅ **Shared spinning** - efficient resource usage  
-- ✅ **Independent installation** - each plugin works alone or together
-- ✅ **Process-level management** - works across different Node-RED project structures
+- ✅ **Shared spinning coordination** - efficient resource usage  
+- ✅ **ActionClient reliability** - no spinning conflicts or nullptr errors
+- ✅ **Automatic lifecycle management** - proper cleanup during redeployments
 
 ## 🔧 Usage
 
-The plugin automatically detects and uses the bridge package when available:
+All nodes automatically use the SharedManager for reliable ROS2 operations:
 
 ```javascript
-// Nodes automatically use bridge when available
-const { Ros2Instance } = require('@chart/node-red-ros2/src/ros2/ros2-instance');
-
-const instance = Ros2Instance.instance();
-const node = await instance.getNode(); // Bridge-managed or standalone node
+// Nodes automatically use SharedManager (always available)
+const manager = require('@chart/node-red-ros2-manager');
+await manager.initialize();
+const {node, nodeId} = await manager.createNode('my_node');
 ```
 
 ## 🎯 Compatibility
 
-- **With Bridge**: Full multi-plugin compatibility, shared ROS2 context
-- **Without Bridge**: Standalone mode with compatibility warnings
+- **SharedManager Integration**: Guaranteed multi-plugin compatibility with shared ROS2 context
 - **Node-RED**: Hot deployment, proper cleanup, lifecycle management
+- **Multi-Plugin**: Works seamlessly with `@chart/node-red-rmf` and other Chart ROS2 plugins
 
 ## 📦 Available Nodes
 
@@ -75,7 +74,7 @@ const node = await instance.getNode(); // Bridge-managed or standalone node
 
 ## 🔗 Related Packages
 
-- [`@chart/node-red-ros2-bridge`](https://github.com/chart-sg/ros2-node-red-bridge) - Shared ROS2 context manager
+- [`@chart/node-red-ros2-manager`](https://github.com/chart-sg/ros2-node-red-bridge) - Shared ROS2 context manager
 - [`@chart/node-red-rmf`](https://github.com/chart-sg/node-red-rmf) - RMF integration for Node-RED
 
 ### Node-RED palette

@@ -4,8 +4,9 @@ const rclnodejs = require("rclnodejs");
 let ros2Bridge = null;
 
 try {
-  ros2Bridge = require('@chart/node-red-ros2-bridge');
-  console.log('EDU-ROS2: Using @chart/node-red-ros2-bridge for shared ROS2 management');
+  ros2Bridge = require('@chart/node-red-ros2-manager');
+  console.log('EDU-ROS2: Using @chart/node-red-ros2-manager for shared ROS2 management');
+  bridgeAvailable = true;
 } catch (error) {
   console.log('EDU-ROS2: Bridge package not found, using fallback implementation:', error.message);
 }
@@ -61,7 +62,7 @@ class Ros2Instance {
     
     // Strategy 2: Direct rclnodejs fallback (for standalone use)
     console.log('EDU-ROS2: Using direct rclnodejs initialization (standalone mode)');
-    console.warn('EDU-ROS2: For multi-plugin compatibility, install @chart/node-red-ros2-bridge');
+    console.warn('EDU-ROS2: For multi-plugin compatibility, install @chart/node-red-ros2-manager');
     
     try {
       await rclnodejs.init();
