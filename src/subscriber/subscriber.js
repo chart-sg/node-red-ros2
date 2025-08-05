@@ -67,10 +67,18 @@ module.exports = function(RED)
         var node = this;
         node.ready = false;
 
-        // \todo handle domain id differently
-        if(config.domain) {
-            // modify the global domain
-            node.domain = RED.nodes.getNode(config.domain).domain;
+        // Get ros2-config
+        if(config.ros2_config) {
+            const ros2Config = RED.nodes.getNode(config.ros2_config);
+            if (!ros2Config) {
+                node.error("ros2-config is required but not found");
+                return;
+            }
+            node.domain = ros2Config.domain || 0;
+            node.namespace = ros2Config.namespace || '';
+        } else {
+            node.error("ros2-config is required");
+            return;
         }
 
         // Check if topic is configured statically or dynamically

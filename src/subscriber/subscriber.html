@@ -5,8 +5,16 @@
         <input type="text" id="node-input-topic" placeholder="Topic">
     </div>
     <div class="form-row">
-        <label for="node-input-domain"><i class="fa fa-globe"></i>&nbsp;&nbsp; Domain ID </label>
-        <input type="number" disabled id="node-input-domain" placeholder="Domain ID">
+        <label for="node-input-ros2_config"><i class="fa fa-cog"></i>&nbsp;&nbsp; ROS2 Config </label>
+        <input type="text" id="node-input-ros2_config" placeholder="ROS2 Configuration">
+    </div>
+    <div class="form-row" id="effective-config-display" style="display:none;">
+        <label><i class="fa fa-info-circle"></i>&nbsp;&nbsp; Effective Config </label>
+        <div class="form-tips">
+            <strong>Domain:</strong> <span id="effective-domain">-</span> | 
+            <strong>Namespace:</strong> <span id="effective-namespace">-</span><br>
+            <strong>Effective Topic:</strong> <span id="effective-topic">-</span>
+        </div>
     </div>
     <div class="form-row node-input-property-container-row">
         <label for="node-input-property-container"><i class="fa fa-bars"></i>&nbsp;&nbsp; QoS</label>
@@ -40,7 +48,7 @@
         defaults:
         {
             topic: { value: "", required: false },
-            domain: { type:"dds-settings", required: true },
+            ros2_config: { type:"ros2-config", required: true },
             props: { value:[] },
             selectedtype: { value: "" }
         },
@@ -59,6 +67,37 @@
         {
             var node = this;
             var linked = false;
+
+            // Update effective configuration display
+            function updateEffectiveConfig() {
+                const ros2ConfigId = $("#node-input-ros2_config").val();
+                const topic = $("#node-input-topic").val();
+                
+                if (ros2ConfigId) {
+                    const ros2Config = RED.nodes.node(ros2ConfigId);
+                    if (ros2Config) {
+                        const domain = ros2Config.domain || 0;
+                        const namespace = ros2Config.namespace || '';
+                        const effectiveTopic = namespace ? namespace + topic : topic;
+                        
+                        $("#effective-domain").text(domain);
+                        $("#effective-namespace").text(namespace || '(none)');
+                        $("#effective-topic").text(effectiveTopic);
+                        $("#effective-config-display").show();
+                    } else {
+                        $("#effective-config-display").hide();
+                    }
+                } else {
+                    $("#effective-config-display").hide();
+                }
+            }
+
+            // Update when ros2-config or topic changes
+            $("#node-input-ros2_config").on('change', updateEffectiveConfig);
+            $("#node-input-topic").on('input', updateEffectiveConfig);
+            
+            // Initial update
+            setTimeout(updateEffectiveConfig, 100);
 
             function trim_selector()
             {

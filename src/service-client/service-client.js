@@ -19,10 +19,18 @@ module.exports = function(RED)
         var node = this;
         node.ready = false;
 
-        // \todo handle domain id differently
-        if(config.domain) {
-            // modify the global domain
-            node.domain = RED.nodes.getNode(config.domain).domain;
+        // Get ros2-config
+        if(config.ros2_config) {
+            const ros2Config = RED.nodes.getNode(config.ros2_config);
+            if (!ros2Config) {
+                node.error("ros2-config is required but not found");
+                return;
+            }
+            node.domain = ros2Config.domain || 0;
+            node.namespace = ros2Config.namespace || '';
+        } else {
+            node.error("ros2-config is required");
+            return;
         }
 
         // Check if topic is configured statically or dynamically
@@ -64,15 +72,25 @@ module.exports = function(RED)
 
                 try {
                     // Destroy existing client if topic changed
-                    if (node.client && node.currentTopic !== topic) {
-                        const ros2Node = await Ros2Instance.instance().getNode();
-                        ros2Node.destroyClient(node.client);
-                        node.client = null;
-                        console.log("Previous service client destroyed for topic change");
+                    if ((node.serviceClientId || node.client) && node.currentTopic !== topic) {
+                        if (node.usesSharedManager && node.serviceClientId) {
+                            // Destroy via SharedManager
+                            const ros2Bridge = require('@chart/node-red-ros2-manager');
+                            const manager = ros2Bridge.getROS2Manager();
+                            manager.destroyServiceClient(node.serviceClientId);
+                            node.serviceClientId = null;
+                            console.log("Previous service client destroyed via SharedManager for topic change");
+                        } else if (node.client) {
+                            // Destroy direct client
+                            const ros2Node = await Ros2Instance.instance().getNode();
+                            ros2Node.destroyClient(node.client);
+                            node.client = null;
+                            console.log("Previous service client destroyed for topic change");
+                        }
                     }
 
                     // Create new client if needed
-                    if (!node.client) {
+                    if (!node.serviceClientId && !node.client) {
                         const dynamicConfig = { ...config, topic: topic };
                         
                         await node.initializeServiceClient(dynamicConfig, node);
@@ -88,22 +106,50 @@ module.exports = function(RED)
             }
 
             // Make service call (for both static and dynamic clients)
-            if (node.ready && node.client) {
-                if (node.client.isServiceServerAvailable() == false) {
-                    node.status({ fill: "yellow", shape: "dot", text: "service not available"});
-                    return;
+            if (node.ready && (node.serviceClientId || node.client)) {
+                
+                if (node.usesSharedManager && node.serviceClientId) {
+                    // Use SharedManager for service call
+                    try {
+                        const ros2Bridge = require('@chart/node-red-ros2-manager');
+                        const manager = ros2Bridge.getROS2Manager();
+                        
+                        // Check if service is available through SharedManager
+                        const isAvailable = await manager.isServiceServerAvailable(node.serviceClientId);
+                        if (!isAvailable) {
+                            node.status({ fill: "yellow", shape: "dot", text: "service not available"});
+                            return;
+                        }
+
+                        // service is available and ready
+                        node.status({ fill: "green", shape: "dot", text: "request published"});
+
+                        const response = await manager.callService(node.serviceClientId, msg.payload);
+                        node.status({ fill: "green", shape: "dot", text: "response received"});
+                        node.send({ payload: response });
+                        
+                    } catch (error) {
+                        console.log("Error calling service via SharedManager:", error);
+                        node.status({ fill: "red", shape: "dot", text: "service call error"});
+                    }
+                    
+                } else if (node.client) {
+                    // Use direct client approach
+                    if (node.client.isServiceServerAvailable() == false) {
+                        node.status({ fill: "yellow", shape: "dot", text: "service not available"});
+                        return;
+                    }
+
+                    // service is available and ready
+                    node.status({ fill: "green", shape: "dot", text: "request published"});
+
+                    node.client.sendRequest(msg.payload, function(response) {
+                        // Passes the message to the next node in the flow
+                        node.status({ fill: "green", shape: "dot", text: "response received"});
+                        node.send({ payload: response });
+                    });
                 }
-
-                // service is available and ready
-                node.status({ fill: "green", shape: "dot", text: "request published"});
-
-                node.client.sendRequest(msg.payload, function(response) {
-                    // Passes the message to the next node in the flow
-                    node.status({ fill: "green", shape: "dot", text: "response received"});
-                    node.send({ payload: response });
-                });
-            }
-            else {
+            } else {
                console.log("node was not ready to process flow data");
             }
         });
@@ -111,12 +157,21 @@ module.exports = function(RED)
         // Called when there is a re-deploy or the program is closed
         node.on('close', async function() {
             try {
-                const ros2Node = await Ros2Instance.instance().getNode();
-                ros2Node.destroyClient(node.client);
+                if (node.usesSharedManager && node.serviceClientId) {
+                    // Destroy via SharedManager
+                    const ros2Bridge = require('@chart/node-red-ros2-manager');
+                    const manager = ros2Bridge.getROS2Manager();
+                    manager.destroyServiceClient(node.serviceClientId);
+                    node.serviceClientId = null;
+                } else if (node.client) {
+                    // Destroy direct client
+                    const ros2Node = await Ros2Instance.instance().getNode();
+                    ros2Node.destroyClient(node.client);
+                    node.client = null;
+                }
             } catch (error) {
                 console.log("Error destroying service client:", error.message);
             }
-            node.client = null;
             node.currentTopic = null;
             node.status({ fill: null, shape: null, text: ""});
         });
@@ -125,10 +180,37 @@ module.exports = function(RED)
     // Async method to initialize the service client
     ServiceClientNode.prototype.initializeServiceClient = async function(config, node) {
         try {
-            // Wait for ROS2 node to be ready
-            const ros2Node = await Ros2Instance.instance().getNode();
+            // Get ROS2 instance (which uses SharedManager if available)
+            const ros2Instance = Ros2Instance.instance();
+            await ros2Instance.waitForReady();
             
-            node.client = ros2Node.createClient(config['selectedtype'], config['topic']);
+            // Check if we're using the bridge (SharedManager)
+            if (ros2Instance.usesBridge) {
+                console.log("[ServiceClient] Using SharedManager approach for service client");
+                
+                // Get the bridge manager
+                const ros2Bridge = require('@chart/node-red-ros2-manager');
+                const manager = ros2Bridge.getROS2Manager();
+                
+                // Create service client through SharedManager
+                node.serviceClientId = await manager.createServiceClient(
+                    ros2Instance.nodeId,
+                    config['selectedtype'],
+                    config['topic']
+                );
+                
+                node.usesSharedManager = true;
+                console.log("[ServiceClient] Service client created via SharedManager:", node.serviceClientId);
+                
+            } else {
+                console.log("[ServiceClient] Using direct approach for service client (standalone mode)");
+                
+                // Fallback to direct service client creation (for standalone use)
+                const ros2Node = await ros2Instance.getNode();
+                node.client = ros2Node.createClient(config['selectedtype'], config['topic']);
+                node.usesSharedManager = false;
+            }
+            
             node.ready = true;
             node.status({ fill: "yellow", shape: "dot", text: "created"});
         } catch (error) {

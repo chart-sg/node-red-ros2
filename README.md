@@ -276,4 +276,4 @@ This fork is based on [edu-nodered-ros2-plugin](https://github.com/EduArt-Roboti
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) file for details.
+ISC License - see [LICENSE](LICENSE) file for details.
