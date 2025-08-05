@@ -1,10 +1,14 @@
 {
   "name": "@chart/node-red-ros2",
-  "license": "MIT",
-  "description": "ROS2 nodes for Node-RED. Uses a shared ROS2 manager to allow multiple rclnodejs plugins to work together.",
+  "license": "ISC",
+  "description": "ROS2 nodes for Node-RED with SharedManager architecture. Eliminates conflicts and enables reliable multi-plugin compatibility.",
   "version": "1.0.0",
+  "author": {
+    "name": "CHART",
+    "url": "https://github.com/chart-sg"
+  },
   "engines": {
-    "node": ">=10"
+    "node": ">=14.0.0"
   },
   "os": [
     "!win32"
@@ -41,16 +45,22 @@
     "textlint-rule-write-good": "~1.6.2"
   },
   "keywords": [
-    "ros2",
     "node-red",
-    "contrib",
-    "context",
-    "process",
-    "data",
-    "json",
+    "ros2",
+    "robotics",
     "chart",
-    "shared-manager"
+    "action-client",
+    "publisher",
+    "subscriber",
+    "service-client",
+    "multi-plugin",
+    "rclnodejs"
   ],
+  "scripts": {
+    "test": "mocha test/**/*.test.js",
+    "lint": "eslint src/",
+    "prepublishOnly": "npm run test && npm run lint"
+  },
   "husky": {
     "hooks": {
       "pre-commit": "lint-staged"
