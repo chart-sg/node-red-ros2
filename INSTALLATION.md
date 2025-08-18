@@ -1,16 +1,8 @@
-# Chart Node-RED ROS2 Package ```bash
-# Navigate to your Node-RED project
-cd ~/.node-red/projects/your-project
-
-# Install with ROS2 environment sourced
-source /opt/ros/jazzy/setup.bash  # or humble
-npm install rclnodejs @chart/node-red-ros2
-```tion Guide
 
 ## 🚀 Quick Start
 
 ### Prerequisites
-- Ubuntu 22.04/24.04 with ROS2 (Humble/Jazzy)
+- Ubuntu 22.04/24.04 with ROS2 (Jazzy)
 - Node.js 14+ and npm
 - Node-RED installed
 
@@ -19,7 +11,7 @@ npm install rclnodejs @chart/node-red-ros2
 #### 1️⃣ **Setup ROS2 Environment**
 ```bash
 # For ROS2 Jazzy (Ubuntu 24.04)
-source /opt/ros/<distro>/setup.bash  # e.g. <distro> is jazzy or humble
+source /opt/ros/<distro>/setup.bash
 ```
 
 #### 2️⃣ **Install Dependencies in Order**
@@ -27,57 +19,35 @@ source /opt/ros/<distro>/setup.bash  # e.g. <distro> is jazzy or humble
 # Navigate to Node-RED directory
 cd <your-node-red-project>  # e.g. <your-node-red-project> is ~/.node-red
 
-# Install rclnodejs with ROS2 environment sourced
-npm install rclnodejs
-
 # Install ros2 package (automatically includes manager)
 npm install @chart/node-red-ros2
 ```
 
-#### 3️⃣ **Alternative: Project-Specific Installation**
+#### 3️⃣ **Install ROS2 Package**
+
+**Option A: From .tgz file (Recommended for end users)**
 ```bash
-# Navigate to your Node-RED project
-cd <your-node-red-project>  # e.g. <your-node-red-project> is ~/.node-red/projects/your-project
-
-# Install with ROS2 environment sourced
-source /opt/ros/<distro>/setup.bash  # e.g. <distro> is jazzy or humble
-npm install rclnodejs @chart/node-red-ros2-manager @chart/node-red-ros2
-```
-
-## 📦 Manual .tgz Installation
-
-If installing from .tgz files:
-
-```bash
-# 1. Source ROS2 environment
-source /opt/ros/<distro>/setup.bash  # e.g. <distro> is jazzy or humble
-
-# 2. Install dependencies first
-cd <your-node-red-project>  # e.g. <your-node-red-project> is ~/.node-red
-npm install rclnodejs
-
-# 3. Install packages in order
 npm install ./chart-node-red-ros2-1.0.0.tgz
 ```
 
-## ❌ Common Issues
+**Option B: Symlink from source (Development/Testing)**
+```bash
+# Clone or download the source code
+git clone <repository-url>
+cd node-red-ros2
 
-### "Missing node modules" error
-- **Cause**: Dependencies not installed or ROS2 environment not sourced
-- **Fix**: Follow step-by-step installation above
+# Create global npm link
+npm link
 
-### "rclnodejs not found" error  
-- **Cause**: rclnodejs installed without ROS2 environment
-- **Fix**: 
-  ```bash
-  npm uninstall rclnodejs
-  source /opt/ros/<distro>/setup.bash  # e.g. <distro> is jazzy or humble
-  npm install rclnodejs
-  ```
+# Link in Node-RED directory
+cd <your-node-red-project>  # e.g. <your-node-red-project> is ~/.node-red
+npm link @chart/node-red-ros2
+```
 
-### Nodes not appearing in palette
-- **Cause**: Installation order incorrect
-- **Fix**: Install ros2-manager before ros2 package
+**Option C: From npm registry (When published)**
+```bash
+npm install @chart/node-red-ros2
+```
 
 ## 🔧 Verification
 
