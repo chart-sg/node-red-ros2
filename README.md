@@ -2,27 +2,30 @@
 
 A Node-RED package providing ROS2 integration with seamless multi-plugin compatibility through the Chart SharedManager architecture.
 
-## ✨ Key Features
+## Key Features
 
-- **🌉 Manager Integration**: Built-in `@chart/node-red-ros2-manager` for seamless multi-plugin compatibility
-- **🔄 Async Initialization**: Robust async patterns with proper error handling  
-- **🔧 Hot Redeployment**: Proper cleanup and re-initialization support
-- **🤝 Multi-Plugin Compatible**: Works alongside `@chart/node-red-rmf` and other Chart ROS2 plugins
-- **⚡ ActionClient Reliability**: No spinning conflicts or nullptr errors
+- **Manager Integration**: Built-in `@chart/node-red-ros2-manager` for seamless multi-plugin compatibility
+- **Async Initialization**: Robust async patterns with proper error handling  
+- **Hot Redeployment**: Proper cleanup and re-initialization support
+- **Multi-Plugin Compatible**: Works alongside `@chart/node-red-rmf` and other Chart ROS2 plugins
+- **ActionClient Reliability**: No spinning conflicts or nullptr errors
 
-## 🚀 Installation
+## Quick Installation
 
 ```bash
-# Install the ROS2 plugin (manager included automatically)
-npm install @chart/node-red-ros2
+# 1. Source ROS2 environment
+source /opt/ros/jazzy/setup.bash        # (or your ROS2 distro)
 
-# Or install both ROS2 + RMF for complete integration
-npm install @chart/node-red-ros2 @chart/node-red-rmf
+# 2. Install in Node-RED directory (with .tgz files)
+cd ~/.node-red
+npm install rclnodejs
+npm install ./chart-node-red-ros2-manager-1.0.0.tgz
+npm install ./chart-node-red-ros2-1.0.0.tgz
 ```
 
-*The `@chart/node-red-ros2-manager` is automatically installed as a dependency.*
+**Complete Installation Guide** - Multiple methods, troubleshooting, development setup: [INSTALLATION.md](./INSTALLATION.md)
 
-## 🏗️ Architecture
+## Architecture
 
 This package uses the **Chart SharedManager** architecture:
 
@@ -41,12 +44,12 @@ This package uses the **Chart SharedManager** architecture:
 ```
 
 ### Benefits:
-- ✅ **No ROS2 context conflicts** between plugins
-- ✅ **Shared spinning coordination** - efficient resource usage  
-- ✅ **ActionClient reliability** - no spinning conflicts or nullptr errors
-- ✅ **Automatic lifecycle management** - proper cleanup during redeployments
+- **No ROS2 context conflicts** between plugins
+- **Shared spinning coordination** - efficient resource usage  
+- **ActionClient reliability** - no spinning conflicts or nullptr errors
+- **Automatic lifecycle management** - proper cleanup during redeployments
 
-## 🔧 Usage
+## Usage
 
 All nodes automatically use the SharedManager for reliable ROS2 operations:
 
@@ -57,13 +60,13 @@ await manager.initialize();
 const {node, nodeId} = await manager.createNode('my_node');
 ```
 
-## 🎯 Compatibility
+## Compatibility
 
 - **SharedManager Integration**: Guaranteed multi-plugin compatibility with shared ROS2 context
 - **Node-RED**: Hot deployment, proper cleanup, lifecycle management
 - **Multi-Plugin**: Works seamlessly with `@chart/node-red-rmf` and other Chart ROS2 plugins
 
-## 📦 Available Nodes
+## Available Nodes
 
 - **Publisher** - Publish ROS2 messages
 - **Subscriber** - Subscribe to ROS2 topics  
@@ -270,7 +273,7 @@ In order to perform a ROS action we need first to specify the associated type. T
     </tr>
 </table>
 
-## �� Original Project
+## Original Project
 
 This fork is based on [edu-nodered-ros2-plugin](https://github.com/EduArt-Robotik/edu_nodered_ros2_plugin) by EduArt Robotik.
 
