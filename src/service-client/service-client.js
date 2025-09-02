@@ -157,13 +157,7 @@ module.exports = function(RED)
         // Called when there is a re-deploy or the program is closed
         node.on('close', async function() {
             try {
-                if (node.usesSharedManager && node.serviceClientId) {
-                    // Destroy via SharedManager
-                    const ros2Bridge = require('@chart/node-red-ros2-manager');
-                    const manager = ros2Bridge.getROS2Manager();
-                    manager.destroyServiceClient(node.serviceClientId);
-                    node.serviceClientId = null;
-                } else if (node.client) {
+                if (node.client) {
                     // Destroy direct client
                     const ros2Node = await Ros2Instance.instance().getNode();
                     ros2Node.destroyClient(node.client);
@@ -180,39 +174,21 @@ module.exports = function(RED)
     // Async method to initialize the service client
     ServiceClientNode.prototype.initializeServiceClient = async function(config, node) {
         try {
-            // Get ROS2 instance (which uses SharedManager if available)
+            console.log("[ServiceClient] Using direct approach for service client");
+            
+            // Get ROS2 node directly (simpler for request-response pattern)
             const ros2Instance = Ros2Instance.instance();
             await ros2Instance.waitForReady();
+            const ros2Node = await ros2Instance.getNode();
             
-            // Check if we're using the bridge (SharedManager)
-            if (ros2Instance.usesBridge) {
-                console.log("[ServiceClient] Using SharedManager approach for service client");
-                
-                // Get the bridge manager
-                const ros2Bridge = require('@chart/node-red-ros2-manager');
-                const manager = ros2Bridge.getROS2Manager();
-                
-                // Create service client through SharedManager
-                node.serviceClientId = await manager.createServiceClient(
-                    ros2Instance.nodeId,
-                    config['selectedtype'],
-                    config['topic']
-                );
-                
-                node.usesSharedManager = true;
-                console.log("[ServiceClient] Service client created via SharedManager:", node.serviceClientId);
-                
-            } else {
-                console.log("[ServiceClient] Using direct approach for service client (standalone mode)");
-                
-                // Fallback to direct service client creation (for standalone use)
-                const ros2Node = await ros2Instance.getNode();
-                node.client = ros2Node.createClient(config['selectedtype'], config['topic']);
-                node.usesSharedManager = false;
-            }
+            // Create service client directly
+            node.client = ros2Node.createClient(config['selectedtype'], config['topic']);
             
             node.ready = true;
             node.status({ fill: "yellow", shape: "dot", text: "created"});
+            
+            console.log("[ServiceClient] Service client created directly");
+            
         } catch (error) {
             console.log("creating service client failed");
             console.log(error);

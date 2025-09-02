@@ -21,6 +21,7 @@ class Ros2Instance {
     this.nodeId = null;
     this.initialized = false;
     this.initPromise = null;
+    this.usesBridge = true; // Always use bridge since it's required
   }
 
   // Initialize ROS2 asynchronously
@@ -88,6 +89,12 @@ class Ros2Instance {
       console.warn('ROS2: Accessing node before initialization. Use await getNode() instead.');
     }
     return this.ros_node;
+  }
+  
+  // Async method to get the nodeId
+  async getNodeId() {
+    await this.waitForReady();
+    return this.nodeId;
   }
   
   // Check if initialization is complete

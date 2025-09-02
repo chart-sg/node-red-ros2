@@ -133,7 +133,7 @@ module.exports = function(RED)
 
         // Called when there is a re-deploy or the program is closed
         node.on('close', function() {
-            if (node.usesSharedManager && node.actionClientId) {
+            if (node.actionClientId) {
                 // Cleanup via SharedManager
                 try {
                     const ros2Bridge = require('@chart/node-red-ros2-manager');
@@ -145,13 +145,11 @@ module.exports = function(RED)
                 } finally {
                     node.actionClientId = null;
                 }
-            } else if (node.action_client) {
-                // Cleanup direct ActionClient
-                node.action_client.destroy();
-                node.action_client = null;
             }
+            
+            // Note: We don't destroy the shared node since it's used by other components
+            
             node.currentTopic = null;
-            node.usesSharedManager = false;
             node.status({ fill: null, shape: null, text: ""});
         });
     }
@@ -159,40 +157,37 @@ module.exports = function(RED)
     // Async method to initialize the action client
     ActionClientNode.prototype.initializeActionClient = async function(config, node) {
         try {
-            // Get ROS2 instance (which uses SharedManager if available)
-            const ros2Instance = Ros2Instance.instance();
-            await ros2Instance.waitForReady();
+            console.log("[ActionClient] Using SharedManager for action client");
             
-            // Check if we're using the bridge (SharedManager)
-            if (ros2Instance.usesBridge) {
-                console.log("[ActionClient] Using SharedManager approach for action client");
-                
-                // Get the bridge manager
-                const ros2Bridge = require('@chart/node-red-ros2-manager');
-                const manager = ros2Bridge.getROS2Manager();
-                
-                // Create action client through SharedManager
-                node.actionClientId = await manager.createActionClient(
-                    ros2Instance.nodeId,
-                    config['selectedtype'],
-                    config['topic']
-                );
-                
-                node.usesSharedManager = true;
-                console.log("[ActionClient] Action client created via SharedManager:", node.actionClientId);
-                
-            } else {
-                console.log("[ActionClient] Using direct approach for action client (standalone mode)");
-                
-                // Fallback to direct ActionClient (for standalone use)
-                const { ActionClient } = require("rclnodejs");
-                const ros2Node = await ros2Instance.getNode();
-                node.action_client = new ActionClient(ros2Node, config['selectedtype'], config['topic']);
-                node.usesSharedManager = false;
+            // Get the SharedManager
+            const ros2Bridge = require('@chart/node-red-ros2-manager');
+            const manager = ros2Bridge.getROS2Manager();
+            
+            // Wait for manager to be ready
+            if (!manager || !manager.initialized) {
+                throw new Error('SharedManager not available or not initialized');
             }
             
+            // Use the shared nodeId from Ros2Instance (similar to RMF pattern)
+            const { Ros2Instance } = require('../ros2/ros2-instance.js');
+            const ros2Instance = Ros2Instance.instance();
+            const sharedNodeId = await ros2Instance.getNodeId();
+            
+            console.log("[ActionClient] Using shared nodeId from Ros2Instance:", sharedNodeId);
+            
+            // Create action client through SharedManager using the shared nodeId
+            node.actionClientId = await manager.createActionClient(
+                sharedNodeId, 
+                config['selectedtype'],
+                config['topic']
+            );
+            
+            node.usesSharedManager = true;
             node.ready = true;
             node.status({ fill: "yellow", shape: "dot", text: "created"});
+            
+            console.log("[ActionClient] Action client created via SharedManager:", node.actionClientId);
+            
         } catch (error) {
             console.log("creating action client failed");
             console.log(error);
@@ -207,76 +202,45 @@ module.exports = function(RED)
         console.log("try to send goal_request:");
         console.log(goal_request);
         try {
-            if (node.usesSharedManager && node.actionClientId) {
-                // Use SharedManager approach (like RMF client)
-                console.log("[ActionClient] Sending goal via SharedManager");
-                
-                const ros2Bridge = require('@chart/node-red-ros2-manager');
-                const manager = ros2Bridge.getROS2Manager();
-                
-                // Send goal through SharedManager with feedback callback
-                const result = await manager.sendGoal(node.actionClientId, goal_request, function(feedback) {
-                    // Feedback callback
-                    node.status({ fill: "green", shape: "dot", text: "action is processing"});
-                    node.send([ null, { payload: feedback } ]);
-                });
-                
-                node.status({ fill: "green", shape: "dot", text: "goal request published"});
-                
-                if (!result.success) {
-                    if (result.canceled) {
-                        node.status({ fill: "yellow", shape: "dot", text: "goal was canceled"});
-                    } else if (result.aborted) {
-                        node.status({ fill: "red", shape: "dot", text: "goal was aborted"});
-                    } else {
-                        node.status({ fill: "red", shape: "dot", text: "goal failed"});
-                    }
-                    return;
-                }
-                
-                console.log("action goal was accepted");
-                console.log("received action result");
-                node.status({ fill: "green", shape: "dot", text: "result received"});
-                node.send([{ payload: result.result }, null ]);
-                
-            } else if (node.action_client) {
-                // Use direct ActionClient approach (fallback for standalone)
-                console.log("[ActionClient] Sending goal via direct ActionClient");
-                
-                const goal_handle_promise = node.action_client.sendGoal(goal_request, function(feedback) {
-                    // Passes the message to the next node in the flow
-                    node.status({ fill: "green", shape: "dot", text: "action is processing"});
-                    node.send([ null, { payload: feedback } ]);
-                });
-            
-                node.status({ fill: "green", shape: "dot", text: "goal request published"});
-                const goal_handle = await goal_handle_promise;
-
-                if (goal_handle.isAccepted() == false) {
-                    node.status({ fill: "red", shape: "dot", text: "goal request rejected"});
-                    return;
-                }
-
-                console.log("action goal was accepted");
-                const result = await goal_handle.getResult();
-                console.log("received action result");
-
-                if (goal_handle.isSucceeded() == false) {
-                    node.status({ fill: "red", shape: "dot", text: "goal failed"});
-                    return;
-                }
-
-                node.status({ fill: "green", shape: "dot", text: "result received"});
-                node.send([{ payload: result }, null ]);
-            } else {
-                throw new Error("No action client available");
+            if (!node.actionClientId) {
+                throw new Error('Action client not initialized');
             }
-        }
-        catch (error) {
-            console.log("sending goal request failed. error:");
+            
+            console.log("[ActionClient] Sending goal via SharedManager");
+            
+            const ros2Bridge = require('@chart/node-red-ros2-manager');
+            const manager = ros2Bridge.getROS2Manager();
+            
+            // Send goal through SharedManager with feedback callback
+            const result = await manager.sendGoal(node.actionClientId, goal_request, function(feedback) {
+                // Feedback callback
+                node.status({ fill: "green", shape: "dot", text: "action is processing"});
+                node.send([ null, { payload: feedback } ]);
+            });
+            
+            node.status({ fill: "green", shape: "dot", text: "goal request published"});
+            
+            if (!result.success) {
+                if (result.canceled) {
+                    node.status({ fill: "yellow", shape: "dot", text: "goal was canceled"});
+                } else if (result.aborted) {
+                    node.status({ fill: "red", shape: "dot", text: "goal was aborted"});
+                } else {
+                    node.status({ fill: "red", shape: "dot", text: "goal failed"});
+                }
+                return;
+            }
+            
+            console.log("action goal was accepted");
+            console.log("received action result");
+            node.status({ fill: "green", shape: "dot", text: "result received"});
+            node.send([{ payload: result.result }, null ]);
+            
+        } catch (error) {
+            console.log("Error in performing_action:");
             console.log(error);
-            node.status({ fill: "red", shape: "dot", text: "sending goal request failed"});
-        }     
+            node.status({ fill: "red", shape: "dot", text: "error"});
+        }
     }
 
     // The node is registered in the runtime using the name "Action Client"
