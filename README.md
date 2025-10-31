@@ -1,29 +1,28 @@
-# @chart/node-red-ros2
+# @chart-sg/node-red-ros2
 
 A Node-RED package providing ROS2 integration with seamless multi-plugin compatibility through the Chart SharedManager architecture.
 
-## Key Features
+## Key Improvements
 
-- **Manager Integration**: Built-in `@chart/node-red-ros2-manager` for seamless multi-plugin compatibility
+- **Manager Integration**: Built-in `@chart-sg/node-red-ros2-manager` for seamless multi-plugin compatibility
 - **Async Initialization**: Robust async patterns with proper error handling  
 - **Hot Redeployment**: Proper cleanup and re-initialization support
-- **Multi-Plugin Compatible**: Works alongside `@chart/node-red-rmf` and other Chart ROS2 plugins
+- **Multi-Plugin Compatible**: Works alongside `@chart-sg/node-red-rmf` and other Chart ROS2 plugins
 - **ActionClient Reliability**: No spinning conflicts or nullptr errors
 
-## Quick Installation
+## Installation
 
 ```bash
 # 1. Source ROS2 environment
 source /opt/ros/jazzy/setup.bash        # (or your ROS2 distro)
 
-# 2. Install in Node-RED directory (with .tgz files)
+# 2. Install in Node-RED directory
 cd ~/.node-red
 npm install rclnodejs
-npm install ./chart-node-red-ros2-manager-1.0.0.tgz
-npm install ./chart-node-red-ros2-1.0.0.tgz
+npm install @chart-sg/node-red-ros2
 ```
 
-**Complete Installation Guide** - Multiple methods, troubleshooting, development setup: [INSTALLATION.md](./INSTALLATION.md)
+The `@chart-sg/node-red-ros2-manager` dependency is automatically installed.
 
 ## Architecture
 
@@ -31,15 +30,15 @@ This package uses the **Chart SharedManager** architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                @chart/node-red-ros2-manager                 │
+│                @chart-sg/node-red-ros2-manager              │
 │              (Shared ROS2 Context Manager)                 │
 └─────────────────────┬───────────────────────────────────────┘
                       │
           ┌───────────┴──────────┐
           │                      │
 ┌─────────▼──────────┐  ┌────────▼─────────┐
-│ @chart/node-red-   │  │ @chart/node-red- │
-│ ros2               │  │ rmf              │
+│ @chart-sg/node-    │  │ @chart-sg/node-  │
+│ red-ros2           │  │ red-rmf          │
 └────────────────────┘  └──────────────────┘
 ```
 
@@ -55,7 +54,7 @@ All nodes automatically use the SharedManager for reliable ROS2 operations:
 
 ```javascript
 // Nodes automatically use SharedManager (always available)
-const manager = require('@chart/node-red-ros2-manager');
+const manager = require('@chart-sg/node-red-ros2-manager');
 await manager.initialize();
 const {node, nodeId} = await manager.createNode('my_node');
 ```
@@ -64,7 +63,7 @@ const {node, nodeId} = await manager.createNode('my_node');
 
 - **SharedManager Integration**: Guaranteed multi-plugin compatibility with shared ROS2 context
 - **Node-RED**: Hot deployment, proper cleanup, lifecycle management
-- **Multi-Plugin**: Works seamlessly with `@chart/node-red-rmf` and other Chart ROS2 plugins
+- **Multi-Plugin**: Works seamlessly with `@chart-sg/node-red-rmf` and other Chart ROS2 plugins
 
 ## Available Nodes
 
@@ -77,8 +76,8 @@ const {node, nodeId} = await manager.createNode('my_node');
 
 ## 🔗 Related Packages
 
-- [`@chart/node-red-ros2-manager`](https://github.com/chart-sg/ros2-node-red-bridge) - Shared ROS2 context manager
-- [`@chart/node-red-rmf`](https://github.com/chart-sg/node-red-rmf) - RMF integration for Node-RED
+- [`@chart-sg/node-red-ros2-manager`](https://github.com/chart-sg/ros2-node-red-bridge) - Shared ROS2 context manager
+- [`@chart-sg/node-red-rmf`](https://github.com/chart-sg/node-red-rmf) - RMF integration for Node-RED
 
 ### Node-RED palette
 

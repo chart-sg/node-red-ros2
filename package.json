@@ -1,5 +1,5 @@
 {
-  "name": "@chart/node-red-ros2",
+  "name": "@chart-sg/node-red-ros2",
   "license": "ISC",
   "description": "ROS2 nodes for Node-RED with SharedManager architecture. Eliminates conflicts and enables reliable multi-plugin compatibility.",
   "version": "1.0.0",
@@ -22,7 +22,7 @@
   },
   "homepage": "https://github.com/chart-sg/node-red-ros2#readme",
   "dependencies": {
-    "@chart/node-red-ros2-manager": "^1.0.0",
+    "@chart-sg/node-red-ros2-manager": "^1.0.0",
     "cron": "~1.8.2",
     "is-web-api": "~1.0.1"
   },
@@ -55,7 +55,7 @@
     "rclnodejs"
   ],
   "scripts": {
-    "test": "mocha test/**/*.test.js",
+    "test": "mocha test/test.js",
     "lint": "eslint src/",
     "prepublishOnly": "npm run test && npm run lint"
   },

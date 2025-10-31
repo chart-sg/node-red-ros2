@@ -1,16 +1,17 @@
-const rclnodejs = require("rclnodejs");
-
-// Import required SharedManager package
+// Import required SharedManager package and get rclnodejs from it
 let ros2Bridge = null;
+let rclnodejs = null;
 let bridgeAvailable = false;
 
 try {
-  ros2Bridge = require('@chart/node-red-ros2-manager');
-  console.log('ROS2: Using @chart/node-red-ros2-manager for shared ROS2 management');
+  ros2Bridge = require('@chart-sg/node-red-ros2-manager');
+  const manager = ros2Bridge.getROS2Manager();
+  rclnodejs = manager.getRclnodejs();
+  console.log('ROS2: Using @chart-sg/node-red-ros2-manager for shared ROS2 management');
   bridgeAvailable = true;
 } catch (error) {
-  console.error('ROS2: Failed to load required @chart/node-red-ros2-manager:', error.message);
-  throw new Error('@chart/node-red-ros2 requires @chart/node-red-ros2-manager to be installed. Please install it with: npm install @chart/node-red-ros2-manager');
+  console.error('ROS2: Failed to load required @chart-sg/node-red-ros2-manager:', error.message);
+  throw new Error('@chart-sg/node-red-ros2 requires @chart-sg/node-red-ros2-manager to be installed. Please install it with: npm install @chart-sg/node-red-ros2-manager');
 }
 
 class Ros2Instance {
@@ -56,7 +57,7 @@ class Ros2Instance {
       return;
     } catch (error) {
       console.error('ROS2: SharedManager initialization failed:', error.message);
-      throw new Error(`@chart/node-red-ros2 requires @chart/node-red-ros2-manager for proper operation: ${error.message}`);
+      throw new Error(`@chart-sg/node-red-ros2 requires @chart-sg/node-red-ros2-manager for proper operation: ${error.message}`);
     }
   }
 

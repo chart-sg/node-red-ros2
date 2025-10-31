@@ -129,7 +129,7 @@ module.exports = function(RED)
     function getUint64FieldsFromMessageType(messageType) {
         try {
             // Get the rclnodejs instance from SharedManager to ensure consistency
-            const ros2Bridge = require('@chart/node-red-ros2-manager');
+            const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
             const manager = ros2Bridge.getROS2Manager();
             
             const rclnodejsInstance = manager.getRclnodejs();
@@ -365,7 +365,7 @@ module.exports = function(RED)
                 // Create proper ROS message object using the SharedManager's rclnodejs instance
                 try {
                     // Get the rclnodejs instance from SharedManager to ensure consistency
-                    const ros2Bridge = require('@chart/node-red-ros2-manager');
+                    const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                     const manager = ros2Bridge.getROS2Manager();
                     
                     const rclnodejsInstance = manager.getRclnodejs();

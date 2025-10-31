@@ -76,7 +76,7 @@ module.exports = function(RED)
                 if ((node.actionClientId || node.action_client) && node.currentTopic !== topic) {
                     if (node.usesSharedManager && node.actionClientId) {
                         // Destroy via SharedManager
-                        const ros2Bridge = require('@chart/node-red-ros2-manager');
+                        const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                         const manager = ros2Bridge.getROS2Manager();
                         manager.destroyActionClient(node.actionClientId);
                         node.actionClientId = null;
@@ -111,7 +111,7 @@ module.exports = function(RED)
                 
                 if (node.usesSharedManager && node.actionClientId) {
                     // Check via SharedManager
-                    const ros2Bridge = require('@chart/node-red-ros2-manager');
+                    const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                     const manager = ros2Bridge.getROS2Manager();
                     isAvailable = manager.isActionServerAvailable(node.actionClientId);
                 } else if (node.action_client) {
@@ -136,7 +136,7 @@ module.exports = function(RED)
             if (node.actionClientId) {
                 // Cleanup via SharedManager
                 try {
-                    const ros2Bridge = require('@chart/node-red-ros2-manager');
+                    const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                     const manager = ros2Bridge.getROS2Manager();
                     manager.destroyActionClient(node.actionClientId);
                     console.log("[ActionClient] Action client destroyed via SharedManager");
@@ -160,7 +160,7 @@ module.exports = function(RED)
             console.log("[ActionClient] Using SharedManager for action client");
             
             // Get the SharedManager
-            const ros2Bridge = require('@chart/node-red-ros2-manager');
+            const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
             const manager = ros2Bridge.getROS2Manager();
             
             // Wait for manager to be ready
@@ -208,7 +208,7 @@ module.exports = function(RED)
             
             console.log("[ActionClient] Sending goal via SharedManager");
             
-            const ros2Bridge = require('@chart/node-red-ros2-manager');
+            const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
             const manager = ros2Bridge.getROS2Manager();
             
             // Send goal through SharedManager with feedback callback

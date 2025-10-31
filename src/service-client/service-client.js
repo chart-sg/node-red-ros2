@@ -75,7 +75,7 @@ module.exports = function(RED)
                     if ((node.serviceClientId || node.client) && node.currentTopic !== topic) {
                         if (node.usesSharedManager && node.serviceClientId) {
                             // Destroy via SharedManager
-                            const ros2Bridge = require('@chart/node-red-ros2-manager');
+                            const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                             const manager = ros2Bridge.getROS2Manager();
                             manager.destroyServiceClient(node.serviceClientId);
                             node.serviceClientId = null;
@@ -111,7 +111,7 @@ module.exports = function(RED)
                 if (node.usesSharedManager && node.serviceClientId) {
                     // Use SharedManager for service call
                     try {
-                        const ros2Bridge = require('@chart/node-red-ros2-manager');
+                        const ros2Bridge = require('@chart-sg/node-red-ros2-manager');
                         const manager = ros2Bridge.getROS2Manager();
                         
                         // Check if service is available through SharedManager
