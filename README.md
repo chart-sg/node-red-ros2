@@ -2,6 +2,10 @@
 
 A Node-RED package providing ROS2 integration with seamless multi-plugin compatibility through the Chart SharedManager architecture.
 
+## ⚠️ IMPORTANT: Terminal Installation Required
+
+**Cannot be installed via Node-RED Palette Manager.** This package requires terminal installation with ROS2 environment sourced because rclnodejs needs access to ROS2 libraries during installation.
+
 ## Key Improvements
 
 - **Manager Integration**: Built-in `@chart-sg/node-red-ros2-manager` for seamless multi-plugin compatibility
