@@ -2,7 +2,7 @@
   "name": "@chart-sg/node-red-ros2",
   "license": "ISC",
   "description": "ROS2 nodes for Node-RED with SharedManager architecture. Eliminates conflicts and enables reliable multi-plugin compatibility.",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "CHART",
     "url": "https://github.com/chart-sg"
